@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+"""
+:Author: Victor Ythier
+:Date: 09/12/2020
+
+Set of rules related to nonCG filtering and UMI deduplication.
+"""
+# IMPORT
+from HiTransMeth import settings
+
+"""
+Run filtering on reads with to high nonCG methyl percentage
+"""
+rule filtering_on_non_CG:
+    input:
+        bam = rules.bismark_mapping.output.bam
+    output:
+        bam_filt = output
+    params:
+        nonCG_cutoff = {settings.references["NON_CG_CUTOFF"]}
+    conda:
+        "envs/bismark.yaml"
+    threads:
+        2
+    resources:
+        cores = 2
+    shell:
+        """
+        filtering_non_conversion -p \\
+        percentage_cutoff {params.nonCG_cutoff} \\
+        {input.bam}
+        """
+
+"""
+Sort bam files before umi-deduplication
+"""
+rule sort_before_dedup:
+    input:
+        bam_filtered = rules.filtering_on_non_CG.output.bam_filt
+    output:
+        bam_filt_sort = "{motif}.R1.bismark_bt2_pe.sorted.bam"
+    threads:
+        6
+    resources:
+        cores = 6
+    conda:
+        "envs/sambamba.yaml"
+    shell:
+        """
+        sambamba sort -t {threads} \\
+        -o {output.bam_filt_sort} \\
+        {input.bam_filtered}
+        """
+
+"""
+Unique Molecular Identifier filtering to avoid a maximum of PCR amplification biais
+We use here the unique method.
+"""
+rule umi_deduplication:
+    input:
+        nonCG_filtered_sort = rules.filtering_on_non_CG.output.bam_filt
+    output:
+        umi_bam = output
+    params:
+        suffix = "{motif}.unique"
+    conda:
+        "envs/umitools.yaml"
+    threads:
+        2
+    resources:
+        cores = 2
+    shell:
+        """
+        umi_tools dedup -I {input.nonCG_filtered_sort}
+        -S {output.umi_bam}
+        --buffer-whole-contig
+        --method=unique
+        --paired
+        --output-stats={params.suffix}
+        """

@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+"""
+:Author: Victor Ythier
+:Date: 09/12/2020
+
+Set of rules related to the bismark/bwt2 alignment.
+"""
+# IMPORT
+
+"""
+Prepare reference construct contig (from resources/generate_ref.py) in case of the argument was not select
+"""
+rule bismark_genome_preparation:
+    input:
+        lambda wildcard: REFERENCES[wildcard.motif]
+    output:
+        touch("{motif}.ref_prepare")
+    conda:
+        "envs/bismark.yaml"
+    shell:
+        """
+        bismark_genome_preparation {input.ref}
+        """
+
+"""
+Run alignment rule using bismark (max insertion size set to 1000)
+"""
+rule bismark_mapping:
+    input:
+        R1_motif_fwd = rules.motif_filtering.output.merge_R1_motif_fwd,
+        R2_motif_rev = rules.motif_filtering.output.merge_R2_motif_rev
+    output:
+        bam_filt = "{condition}.{motif}.R1_bismark_bt2_pe.bam",
+        report = "{condition}.{motif}.R1_bismark_bt2_pe_report.txt",
+    conda:
+        "envs/bismark.yaml"
+    threads:
+        6
+    resources:
+        cores = 6
+    shell:
+        """
+        bismark --quiet --non_directional -p {threads}
+        -un -X 1000
+        -N 0
+        -q {params.ref_folder}
+        -1 {input.R1}
+        -2 {input.R2}
+        -o {params.output_folder}
+        """

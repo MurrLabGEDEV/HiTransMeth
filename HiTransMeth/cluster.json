@@ -1,0 +1,9 @@
+{
+	"__default__": {
+		"queue": "normal",
+		"name": "promoter.{rule}.{wildcards}",
+		"logdir": "clusterlogs",
+		"output": "{rule}.{wildcards}.out",
+		"error": "{rule}.{wildcards}.err"
+	}
+}

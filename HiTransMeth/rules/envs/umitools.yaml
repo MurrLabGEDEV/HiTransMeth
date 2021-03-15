@@ -1,0 +1,6 @@
+channels:
+  - r
+  - bioconda
+  - conda-forge
+dependencies:
+  - umitools=0.3.4

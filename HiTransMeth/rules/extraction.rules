@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+"""
+:Author: Victor Ythier
+:Date: 09/12/2020
+
+Set of rules for methylation extraction.
+"""
+# IMPORT
+
+"""
+Sort before extracting methylation information
+"""
+rule sort_before_extract:
+    input:
+        umi_bam = rules.umi_deduplication.output.umi_bam
+    output:
+        umi_sort = "{motif}.UNIdedup.sorted.bam"
+    conda:
+        "envs/sambamba.yaml"
+    threads:
+        6
+    resources:
+        cores = 6
+    shell:
+        """
+        sambamba sort -n -t {threads} {output.umi_sort} {input.umi_bam}
+        """
+
+"""
+Use bismark to extract methylation information.
+"""
+rule methyl_extraction:
+    input:
+        genome_folder = REFERENCES,
+        umi_sort_bam = rules.sort_before_extract.output.umi_sort
+    output:
+        file1 = output
+    params:
+        output_dir = output
+    conda:
+        "envs/bismark.yaml"
+    threads:
+        2
+    resources:
+        cores = 2
+    shell:
+        """
+        bismark_methylation_extractor -p \\
+        --no-overlap \\
+        --bedGraph \\
+        --cytosine_report \\
+        --CX \\
+        --genome_folder {input.genome_folder} \\
+        {input.umi_sort_bam} \\
+        -o {params.output_dir}
+        """

@@ -1,0 +1,7 @@
+channels:
+  - r
+  - bioconda
+  - conda-forge
+dependencies:
+  - r-stringr=1.4.0
+  - bioconductor-shortread=1.46.0
